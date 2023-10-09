@@ -1,13 +1,41 @@
-from fastapi import FastAPI , Request
+from fastapi import FastAPI , Request,HTTPException
+import jwt
+from decouple import  config
 from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
 from rutas.formateo import formateo_respuesta
 from rutas.manejador_acciones import intencion_bienvenida, intencion_postulante
 
 
 app = FastAPI()
 
-@app.post("/webhook")
+SECRET_KEY = config('SECRET_KEY')
+ALGORITHM = "HS256"
+class Token(BaseModel):
+    access_token: str
+def create_jwt_token(data: dict):
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except:
+        return None
+
+
+@app.post("/webhook", response_model=dict)
 async def enviarmensaje(request: Request):
+    token = request.headers.get('Authorization')
+    print(token)
+    if token is None:
+        error = formateo_respuesta(['Sin autorización, contacta un Administrador '])
+        return jsonable_encoder(error)
+    payload = verify_token(token)
+    if payload is None:
+        error = formateo_respuesta(['Sin autorización '])
+        return jsonable_encoder(error)
+
     body = await request.json()
     action = body['queryResult']['action']
 # Obtener los parámetros de outputContexts
