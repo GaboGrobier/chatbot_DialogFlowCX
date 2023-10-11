@@ -11,11 +11,13 @@ app = FastAPI()
 
 SECRET_KEY = config('SECRET_KEY')
 ALGORITHM = "HS256"
+
+
 class Token(BaseModel):
     access_token: str
-def create_jwt_token(data: dict):
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
+
+#verificar Token
 def verify_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -27,7 +29,6 @@ def verify_token(token: str):
 @app.post("/webhook", response_model=dict)
 async def enviarmensaje(request: Request):
     token = request.headers.get('Authorization')
-    print(token)
     if token is None:
         error = formateo_respuesta(['Sin autorización, contacta un Administrador '])
         return jsonable_encoder(error)
@@ -40,7 +41,6 @@ async def enviarmensaje(request: Request):
     action = body['queryResult']['action']
 # Obtener los parámetros de outputContexts
     output_contexts = body.get("queryResult", {}).get("outputContexts", [])
-    intencion = body.get("queryResult", {}).get("intent", {}).get("displayName")
 
     #Inicializar las variables
     ubicacion = None

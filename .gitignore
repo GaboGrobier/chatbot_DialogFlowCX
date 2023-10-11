@@ -1,4 +1,6 @@
 venv/
 create_token.py
 .env
+test_main.http
+
 

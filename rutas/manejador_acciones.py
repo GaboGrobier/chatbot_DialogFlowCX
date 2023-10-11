@@ -19,6 +19,7 @@ def intencion_postulante(body: dict)->dict:
     ubicacion = None
     estado = None
     carrera = None
+    cantidad = None
 
     # Iterar sobre los contextos y obtener los parámetros
     for context in output_contexts:
@@ -26,11 +27,12 @@ def intencion_postulante(body: dict)->dict:
         ubicacion = parametros.get("Ubicacion") or ubicacion
         estado = parametros.get("Estado") or estado
         carrera = parametros.get("Carrera") or carrera
+        cantidad = parametros.get("cantidad") or cantidad
     respuesta = formateo_respuesta(
         [
-            'De acuerdo a lo solicitado podemos resumir que : ',
-            'necesitas un candidato de la carrera de : ', carrera,
-            'y el candidato debe esta en la region de ', ubicacion
+           'Entedemos, dejanos buscar en nuestra Base datos',
+            'Estamos buscando un postulante de la carrera de :', carrera,
+            f'y que este en la region de :',ubicacion
         ]
     )
     return respuesta
