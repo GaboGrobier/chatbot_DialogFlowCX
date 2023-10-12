@@ -1,7 +1,15 @@
 from rutas.formateo import formateo_respuesta
+import os
+from decouple import config
+import asyncio
+from sydney import SydneyClient
+os.environ["BING_U_COOKIE"]=config('bing_chat_key')
+
+
+#configuracion intencion de bienvenida
 def intencion_bienvenida(body : dict)->dict :
-    session = body['session']
-    print('esta es la session',session)
+#    session = body['session']
+#    print('esta es la session',session)
 
     respuesta = formateo_respuesta(
         [
@@ -11,11 +19,13 @@ def intencion_bienvenida(body : dict)->dict :
         ]
     )
     return respuesta
+
+#configuracion accion para intencion de solicitud de postulante
 def intencion_postulante(body: dict)->dict:
     # Obtener los parámetros de outputContexts
     output_contexts = body.get("queryResult", {}).get("outputContexts", [])
 
-    # Inicializar las variables
+    #Inicializar las variables
     ubicacion = None
     estado = None
     carrera = None
@@ -36,3 +46,25 @@ def intencion_postulante(body: dict)->dict:
         ]
     )
     return respuesta
+
+#trabajo de modelo de respaldo
+async def modelo_respaldo(mensaje):
+    async with SydneyClient() as sydney:
+        respuesta = await  sydney.ask(mensaje)
+        return respuesta
+async def bing_chat(mensaje_usuario):
+    async with SydneyClient() as sydney:
+        while True:
+
+            prompt =mensaje_usuario
+            if prompt == '!reset':
+                await sydney.reset_conversation()
+                continue
+            elif prompt == '!exit':
+                break
+            async for response in sydney.ask_stream(prompt):
+                conversacion = []
+                print(response)
+                conversacion.append(response)
+                print(conversacion)
+                return conversacion

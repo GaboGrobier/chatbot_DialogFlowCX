@@ -1,11 +1,12 @@
-from fastapi import FastAPI , Request,HTTPException
+from fastapi import FastAPI , Request
 import jwt
 from decouple import  config
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from rutas.formateo import formateo_respuesta
+from rutas.manejador_acciones import modelo_respaldo
 from rutas.manejador_acciones import intencion_bienvenida, intencion_postulante
-
+from sydney import SydneyClient
 
 app = FastAPI()
 
@@ -28,19 +29,25 @@ def verify_token(token: str):
 
 @app.post("/webhook", response_model=dict)
 async def enviarmensaje(request: Request):
+    #obtencion de token enviado de plataforma
     token = request.headers.get('Authorization')
+    #Validacion token vacio
     if token is None:
         error = formateo_respuesta(['Sin autorización, contacta un Administrador '])
         return jsonable_encoder(error)
+
+    #validacion token sin permiso
     payload = verify_token(token)
     if payload is None:
         error = formateo_respuesta(['Sin autorización '])
         return jsonable_encoder(error)
 
+#obtener valores principales de trabajo
     body = await request.json()
     action = body['queryResult']['action']
 # Obtener los parámetros de outputContexts
     output_contexts = body.get("queryResult", {}).get("outputContexts", [])
+
 
     #Inicializar las variables
     ubicacion = None
@@ -54,19 +61,22 @@ async def enviarmensaje(request: Request):
         estado = parametros.get("Estado") or estado
         carrera = parametros.get("Carrera") or carrera
 
-
+#intencion de bienvenida - primer ingreso
     if action == 'Bienvenida':
-        print('esto en ', action)
         response = intencion_bienvenida(body)
         return jsonable_encoder(response)
 
+#Solicitud de postulantes
     if action == 'postulante':
         response = intencion_postulante(body)
         return jsonable_encoder(response)
 
-    else:
-        return jsonable_encoder(
-            formateo_respuesta(
-                ['No he podido entender tu pregunta por favor realizala de nuevo ']
-            )
-        )
+#intencion de backup - modo prueba
+    if action == 'input.unknown':
+        mensaje = body.get('queryResult', {}).get('queryText')
+        print(mensaje)
+        print('entre a intencion por defecto ')
+        response = modelo_respaldo(mensaje)
+        print(mensaje)
+        return formateo_respuesta([response])
+
