@@ -75,8 +75,7 @@ async def enviarmensaje(request: Request):
     if action == 'input.unknown':
         mensaje = body.get('queryResult', {}).get('queryText')
         print(mensaje)
-        print('entre a intencion por defecto ')
-        response = modelo_respaldo(mensaje)
-        print(mensaje)
+        response = await modelo_respaldo(mensaje)
+        print(response)
         return formateo_respuesta([response])
 
