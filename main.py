@@ -4,9 +4,11 @@ from decouple import  config
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from rutas.formateo import formateo_respuesta
-from rutas.manejador_acciones import modelo_respaldo
 from rutas.manejador_acciones import intencion_bienvenida, intencion_postulante
-from sydney import SydneyClient
+from rutas.manejador_acciones import interactuar_con_hugchat
+from fastapi.responses import JSONResponse
+
+
 
 app = FastAPI()
 
@@ -25,7 +27,7 @@ def verify_token(token: str):
         return payload
     except:
         return None
-
+#
 
 @app.post("/webhook", response_model=dict)
 async def enviarmensaje(request: Request):
@@ -44,38 +46,50 @@ async def enviarmensaje(request: Request):
 
 #obtener valores principales de trabajo
     body = await request.json()
-    action = body['queryResult']['action']
-# Obtener los parámetros de outputContexts
-    output_contexts = body.get("queryResult", {}).get("outputContexts", [])
+    print(body)
+    # Obtener la información del intento
+    intent_info = body.get('intentInfo', {})
+    display_name = intent_info.get('displayName', '')
+    tag = body.get('fulfillmentInfo',{}).get('tag','')
+    print('este es el tag---->',tag)
+
+    # Imprimir el nombre del intento
+    print('Display Name:', display_name)
 
 
-    #Inicializar las variables
-    ubicacion = None
-    estado = None
-    carrera = None
-
-    # Iterar sobre los contextos y obtener los parámetros
-    for context in output_contexts:
-        parametros = context.get("parameters", {})
-        ubicacion = parametros.get("Ubicacion") or ubicacion
-        estado = parametros.get("Estado") or estado
-        carrera = parametros.get("Carrera") or carrera
 
 #intencion de bienvenida - primer ingreso
-    if action == 'Bienvenida':
+    if display_name == 'Bienvenida':
         response = intencion_bienvenida(body)
         return jsonable_encoder(response)
 
 #Solicitud de postulantes
-    if action == 'postulante':
-        response = intencion_postulante(body)
-        return jsonable_encoder(response)
+    if display_name == 'Solicitud_postulante':
+        parameters = intent_info.get('parameters', {})
+        region = parameters.get('region', {}).get('resolvedValue', '')
+        carrera = parameters.get('carrera', {}).get('resolvedValue', '')
+
+        # Imprimir los valores obtenidos
+        print('Region:', region)
+        print('Carrera:', carrera)
+        response = intencion_postulante(carrera, region)
+        print(response)
+        return response
+
+
+
 
 #intencion de backup - modo prueba
-    if action == 'input.unknown':
-        mensaje = body.get('queryResult', {}).get('queryText')
+    if tag == 'Respuesta_hugchat':
+        mensaje = body.get("text", {})
         print(mensaje)
-        response = await modelo_respaldo(mensaje)
-        print(response)
-        return formateo_respuesta([response])
+
+        # Llama a HugChat de manera asincrónica
+        response_hugchat =  str(interactuar_con_hugchat(mensaje))
+        print(response_hugchat)
+        respuesta = formateo_respuesta([response_hugchat])
+        print(respuesta)
+
+
+        return respuesta
 

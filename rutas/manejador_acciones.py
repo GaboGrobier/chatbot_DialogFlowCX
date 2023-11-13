@@ -1,18 +1,16 @@
 from rutas.formateo import formateo_respuesta
-import os
 from decouple import config
-import asyncio
-from sydney import SydneyClient
-os.environ["BING_U_COOKIE"]=config('bing_chat_key')
+from hugchat import hugchat
+from hugchat.login import Login
 import requests
 import json
 
 
-
 #configuracion intencion de bienvenida
 def intencion_bienvenida(body : dict)->dict :
-#    session = body['session']
-#    print('esta es la session',session)
+    #session = body['session']
+    #print('esta es la session',session)
+    #return session
 
 
     respuesta = formateo_respuesta(
@@ -25,21 +23,13 @@ def intencion_bienvenida(body : dict)->dict :
     return respuesta
 
 #configuracion accion para intencion de solicitud de postulante
-def intencion_postulante(body: dict)->dict:
-    # Obtener los parámetros de outputContexts
-    output_contexts = body.get("queryResult", {}).get("outputContexts", [])
-
+def intencion_postulante(carrera, region):
     #Inicializar las variables
-    ubicacion = None
+    ubicacion = region
     estado = None
-    carrera = None
+    carrera = carrera
     cantidad = None
 
-    # Iterar sobre los contextos y obtener los parámetros
-    for context in output_contexts:
-        parametros = context.get("parameters", {})
-        ubicacion = ', '.join(parametros.get("Ubicacion", []))  # Convertir la lista en una cadena limpia
-        carrera = ', '.join(parametros.get("Carrera", []))  # Convertir la lista en una cadena limpia
 
     # Realizar la solicitud a la API y obtener la respuesta
     data = {
@@ -56,48 +46,56 @@ def intencion_postulante(body: dict)->dict:
         if isinstance(response_data, list) and len(response_data) > 0:
             response_list = []
             for postulante in response_data:
-                # Crear un cuadro de texto estructurado para cada postulante
+                # Crear un mensaje de texto para cada postulante
                 formatted_text = f"Nombre completo: {postulante['nombres']} {postulante['apellidos']}\n"
                 formatted_text += f"Correo: {postulante['email']}\n"
                 formatted_text += f"Teléfono: {postulante['telefono']}\n"
                 formatted_text += f"Universidad: {postulante['universidad']}"
 
-                response_text = {
+                # Agregar un separador entre los resultados
+                formatted_text += "\n___________________\n"
+
+                text_response = {
                     "text": {
                         "text": [formatted_text]
                     }
                 }
 
-                response_list.append(response_text)
+                response_list.append(text_response)
 
-            response_dict = {"fulfillmentMessages": response_list}
-            return response_dict
-        else:
-            respuesta = formateo_respuesta(["No se encontraron postulantes con los criterios especificados."])
-    else:
-        respuesta = formateo_respuesta(
-            ["Hubo un error al buscar en nuestra base de datos, por favor inténtalo nuevamente"])
+            # Formatear la respuesta de acuerdo con el formato de Dialogflow CX
+            fulfillment_response = {"fulfillment_response": {"messages": response_list}}
+            return fulfillment_response
 
-    return respuesta
 
-#trabajo de modelo de respaldo
-async def modelo_respaldo(mensaje):
-    async with SydneyClient() as sydney:
-        respuesta = await  sydney.ask(mensaje)
-        return respuesta
-async def bing_chat(mensaje_usuario):
-    async with SydneyClient() as sydney:
-        while True:
 
-            prompt =mensaje_usuario
-            if prompt == '!reset':
-                await sydney.reset_conversation()
-                continue
-            elif prompt == '!exit':
-                break
-            async for response in sydney.ask_stream(prompt):
-                conversacion = []
-                print(response)
-                conversacion.append(response)
-                print(conversacion)
-                return conversacion
+
+
+
+
+
+
+def interactuar_con_hugchat(mensaje_usuario):
+    sign = Login(config('User_hug'), config('passhug'))
+    cookies = sign.login()
+    chatbot = hugchat.ChatBot(cookies=cookies)
+    id_conversacion = chatbot.new_conversation()
+    chatbot.switch_llm(0)
+
+    respuesta_hugchat = chatbot.chat(mensaje_usuario)
+    return respuesta_hugchat
+
+
+def interactuar_con_hugchat(mensaje_usuario):
+    sign = Login(config('User_hug'), config('passhug'))
+    cookies = sign.login()
+    chatbot = hugchat.ChatBot(cookies=cookies)
+    id_conversacion = chatbot.new_conversation()
+    chatbot.switch_llm(0)
+
+    respuesta_hugchat = chatbot.chat(mensaje_usuario)
+    return respuesta_hugchat
+
+
+
+
