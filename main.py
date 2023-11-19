@@ -89,7 +89,5 @@ async def enviarmensaje(request: Request):
         print(response_hugchat)
         respuesta = formateo_respuesta([response_hugchat])
         print(respuesta)
-
-
         return respuesta
 

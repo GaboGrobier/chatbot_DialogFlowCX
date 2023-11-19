@@ -36,7 +36,7 @@ def intencion_postulante(carrera, region):
         "comuna": ubicacion,
         "carrera": carrera
     }
-    url = "http://localhost:8081/api/v1/postulante/filtro"
+    url = "http://54.237.232.232:8081/api/v1/postulante/filtro"
     headers = {'Content-Type': 'application/json'}
     response = requests.post(url, headers=headers, data=json.dumps(data))
 
